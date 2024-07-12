@@ -1,0 +1,4 @@
+args:
+  ignore:
+    - nextjs/package-lock.json
+
