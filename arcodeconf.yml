@@ -1,4 +1,5 @@
 args:
   ignore:
     - nextjs/package-lock.json
-
+  resources:
+    - https://developer.accuweather.com/accuweather-forecast-api/apis
