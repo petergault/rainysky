@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { WeatherService, DailyForecast } from '@/types';
+import { useSearchParams } from 'next/navigation';
+import { WeatherService, DailyForecast, WeatherData } from '@/types';
 
 const generateDailyData = (azureData: any, date: Date): DailyForecast => {
   const azureService: WeatherService = {
@@ -35,15 +36,22 @@ const generateDailyData = (azureData: any, date: Date): DailyForecast => {
 };
 
 const WeeklyForecast: React.FC = () => {
-  const [weekForecast, setWeekForecast] = useState<DailyForecast[]>([]);
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const fetchWeatherData = async () => {
+      const zipcode = searchParams.get('zipcode');
+      if (!zipcode) {
+        setError('Please enter a zipcode to get weather data.');
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        // For this example, we'll use fixed coordinates for New York City
-        const response = await fetch('/api/weather/azuremaps?lat=40.7128&lon=-74.0060&duration=240');
+        const response = await fetch(`/api/weather/azuremaps?zipcode=${zipcode}&duration=240`);
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(`Failed to fetch weather data: ${errorData.error}. Details: ${errorData.details || 'No additional details'}`);
@@ -51,13 +59,16 @@ const WeeklyForecast: React.FC = () => {
         const azureData = await response.json();
         
         const startDate = new Date();
-        const newWeekForecast = Array.from({ length: 10 }, (_, i) => {
+        const weekForecast = Array.from({ length: 10 }, (_, i) => {
           const date = new Date(startDate);
           date.setDate(startDate.getDate() + i);
           return generateDailyData(azureData, date);
         });
         
-        setWeekForecast(newWeekForecast);
+        setWeatherData({
+          locationName: azureData.locationName,
+          weekForecast: weekForecast
+        });
         setIsLoading(false);
       } catch (err) {
         console.error('Error fetching weather data:', err);
@@ -67,7 +78,7 @@ const WeeklyForecast: React.FC = () => {
     };
 
     fetchWeatherData();
-  }, []);
+  }, [searchParams]);
 
   if (isLoading) {
     return <div className="text-center">Loading weather data...</div>;
@@ -77,15 +88,22 @@ const WeeklyForecast: React.FC = () => {
     return <div className="text-center text-red-500">{error}</div>;
   }
 
+  if (!weatherData) {
+    return <div className="text-center">No weather data available.</div>;
+  }
+
   return (
     <div className="space-y-8">
-      {weekForecast.map((day, index) => (
+      <h2 className="text-2xl font-bold text-center text-white mb-4">
+        Weather Forecast for {weatherData.locationName}
+      </h2>
+      {weatherData.weekForecast.map((day, index) => (
         <div key={index} className="bg-white rounded-lg shadow-md p-4">
-          <h2 className="text-xl font-semibold mb-4">{day.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
+          <h3 className="text-xl font-semibold mb-4">{day.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
           <div className="space-y-4">
             {day.services.map((service, serviceIndex) => (
               <div key={serviceIndex}>
-                <h3 className="text-lg font-medium mb-2">{service.name}</h3>
+                <h4 className="text-lg font-medium mb-2">{service.name}</h4>
                 <div className="grid grid-cols-25 gap-1">
                   {service.hourlyForecast?.map((hour, hourIndex) => (
                     <div

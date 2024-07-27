@@ -11,3 +11,8 @@ export interface DailyForecast {
   date: Date;
   services: WeatherService[];
 }
+
+export interface WeatherData {
+  locationName: string;
+  weekForecast: DailyForecast[];
+}
