@@ -16,3 +16,16 @@ export interface WeatherData {
   locationName: string;
   weekForecast: DailyForecast[];
 }
+
+export interface TomorrowIOHourlyForecast {
+  time: string;
+  values: {
+    precipitationProbability: number;
+  };
+}
+
+export interface TomorrowIOForecast {
+  timelines: {
+    hourly: TomorrowIOHourlyForecast[];
+  };
+}
