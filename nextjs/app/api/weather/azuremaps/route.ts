@@ -32,9 +32,19 @@ export async function GET(request: Request) {
       throw new Error(`Azure Maps API responded with status: ${response.status}. Error: ${errorText}`);
     }
     const data = await response.json();
-    return NextResponse.json({ ...data, locationName });
+
+    // Ensure the forecasts array exists and contains the expected data
+    const forecasts = data.forecasts?.map((forecast: any) => ({
+      date: forecast.date,
+      precipitationProbability: forecast.precipitationProbability ?? 0
+    })) ?? [];
+
+    return NextResponse.json({ 
+      forecasts,
+      locationName 
+    });
   } catch (error) {
     console.error('Error fetching Azure Maps data:', error);
-    return NextResponse.json({ error: 'Failed to fetch weather data', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch weather data', details: (error as Error).message }, { status: 500 });
   }
 }

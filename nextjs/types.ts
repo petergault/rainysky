@@ -39,3 +39,11 @@ export interface ForecaHourlyForecast {
 export interface ForecaForecast {
   forecast: ForecaHourlyForecast[];
 }
+
+export interface AzureForecast {
+  forecasts: Array<{
+    date: string;
+    precipitationProbability: number;
+  }>;
+  locationName: string;
+}

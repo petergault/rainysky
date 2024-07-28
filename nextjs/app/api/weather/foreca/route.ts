@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 const FORECA_API_ENDPOINT = 'https://foreca-weather.p.rapidapi.com';
 
 async function getLocationId(zipcode: string): Promise<string> {
-  const searchUrl = new URL(FORECA_API_ENDPOINT + '/location/search/' + zipcode);
+  const searchUrl = new URL(FORECA_API_ENDPOINT + '/location/search/' + encodeURIComponent(zipcode));
   searchUrl.searchParams.append('country', 'us');  // Assuming US zipcodes
 
   const options = {
@@ -61,9 +61,16 @@ export async function GET(request: Request) {
       throw new Error(`Foreca API responded with status: ${response.status}. Error: ${errorText}`);
     }
     const data = await response.json();
-    return NextResponse.json(data);
+
+    // Ensure the forecast array exists and contains the expected data
+    const forecast = data.forecast?.map((hour: any) => ({
+      time: hour.time,
+      precipProb: hour.precipProb ?? 0
+    })) ?? [];
+
+    return NextResponse.json({ forecast });
   } catch (error) {
     console.error('Error fetching Foreca data:', error);
-    return NextResponse.json({ error: 'Failed to fetch weather data', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch weather data', details: (error as Error).message }, { status: 500 });
   }
 }
