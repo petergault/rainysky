@@ -1,5 +1,6 @@
 export interface HourlyForecast {
   precipChance: number;
+  time: string;
 }
 
 export interface WeatherService {
@@ -28,4 +29,13 @@ export interface TomorrowIOForecast {
   timelines: {
     hourly: TomorrowIOHourlyForecast[];
   };
+}
+
+export interface ForecaHourlyForecast {
+  time: string;
+  precipProb: number;
+}
+
+export interface ForecaForecast {
+  forecast: ForecaHourlyForecast[];
 }

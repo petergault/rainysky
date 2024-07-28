@@ -2,15 +2,18 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { WeatherService, DailyForecast, WeatherData, TomorrowIOForecast } from '@/types';
+import { WeatherService, DailyForecast, WeatherData, TomorrowIOForecast, ForecaForecast } from '@/types';
+import { format, parseISO } from 'date-fns';
+import { utcToZonedTime } from 'date-fns-tz';
 
-const generateDailyData = (azureData: any, tomorrowIOData: TomorrowIOForecast, date: Date): DailyForecast => {
+const generateDailyData = (azureData: any, tomorrowIOData: TomorrowIOForecast, forecaData: ForecaForecast, date: Date): DailyForecast => {
   const azureService: WeatherService = {
     name: 'Azure Maps',
     hourlyForecast: azureData.forecasts
       .filter((forecast: any) => new Date(forecast.date).toDateString() === date.toDateString())
       .map((forecast: any) => ({
         precipChance: forecast.precipitationProbability,
+        time: forecast.date,
       })),
   };
 
@@ -20,20 +23,23 @@ const generateDailyData = (azureData: any, tomorrowIOData: TomorrowIOForecast, d
       .filter((hour: any) => new Date(hour.time).toDateString() === date.toDateString())
       .map((hour: any) => ({
         precipChance: hour.values.precipitationProbability,
+        time: hour.time,
       })),
   };
 
-  // Simulate data for AccuWeather (replace with actual API call when available)
-  const accuWeatherService: WeatherService = {
-    name: 'AccuWeather',
-    hourlyForecast: Array(24).fill(null).map(() => ({
-      precipChance: Math.floor(Math.random() * 100),
-    })),
+  const forecaService: WeatherService = {
+    name: 'Foreca',
+    hourlyForecast: forecaData.forecast
+      .filter((hour: any) => new Date(hour.time).toDateString() === date.toDateString())
+      .map((hour: any) => ({
+        precipChance: hour.precipProb,
+        time: hour.time,
+      })),
   };
 
   return {
     date,
-    services: [azureService, tomorrowIOService, accuWeatherService],
+    services: [azureService, tomorrowIOService, forecaService].filter(service => service.hourlyForecast && service.hourlyForecast.length > 0),
   };
 };
 
@@ -53,24 +59,26 @@ const WeeklyForecast: React.FC = () => {
       }
 
       try {
-        const [azureResponse, tomorrowIOResponse] = await Promise.all([
+        const [azureResponse, tomorrowIOResponse, forecaResponse] = await Promise.all([
           fetch(`/api/weather/azuremaps?zipcode=${zipcode}&duration=240`),
-          fetch(`/api/weather/tomorrowio?location=${zipcode}`)
+          fetch(`/api/weather/tomorrowio?location=${zipcode} US`), // Updated to include "US"
+          fetch(`/api/weather/foreca?location=${zipcode}`)
         ]);
 
-        if (!azureResponse.ok || !tomorrowIOResponse.ok) {
+        if (!azureResponse.ok || !tomorrowIOResponse.ok || !forecaResponse.ok) {
           throw new Error('Failed to fetch weather data from one or more sources.');
         }
 
         const azureData = await azureResponse.json();
         const tomorrowIOData = await tomorrowIOResponse.json();
+        const forecaData = await forecaResponse.json();
         
         const startDate = new Date();
         const weekForecast = Array.from({ length: 5 }, (_, i) => {
           const date = new Date(startDate);
           date.setDate(startDate.getDate() + i);
-          return generateDailyData(azureData, tomorrowIOData, date);
-        });
+          return generateDailyData(azureData, tomorrowIOData, forecaData, date);
+        }).filter(day => day.services.length > 0);  // Only include days with data
         
         setWeatherData({
           locationName: azureData.locationName,
@@ -87,6 +95,12 @@ const WeeklyForecast: React.FC = () => {
     fetchWeatherData();
   }, [searchParams]);
 
+  const formatTimeToEST = (timeString: string) => {
+    const date = parseISO(timeString);
+    const estDate = utcToZonedTime(date, 'America/New_York');
+    return format(estDate, 'h:mm a');
+  };
+
   if (isLoading) {
     return <div className="text-center">Loading weather data...</div>;
   }
@@ -95,7 +109,7 @@ const WeeklyForecast: React.FC = () => {
     return <div className="text-center text-red-500">{error}</div>;
   }
 
-  if (!weatherData) {
+  if (!weatherData || weatherData.weekForecast.length === 0) {
     return <div className="text-center">No weather data available.</div>;
   }
 
@@ -115,14 +129,15 @@ const WeeklyForecast: React.FC = () => {
                   {service.hourlyForecast?.map((hour, hourIndex) => (
                     <div
                       key={hourIndex}
-                      className="h-8 w-full flex items-center justify-center text-xs font-semibold"
+                      className="h-16 w-full flex flex-col items-center justify-center text-xs font-semibold"
                       style={{
                         backgroundColor: `rgba(30, 144, 255, ${hour.precipChance / 100})`,
                         color: hour.precipChance > 50 ? 'white' : 'black'
                       }}
                       title={`Hour ${hourIndex}: ${hour.precipChance}% chance of precipitation`}
                     >
-                      {hour.precipChance}%
+                      <div>{hour.precipChance}%</div>
+                      <div className="mt-1 text-[10px]">{formatTimeToEST(hour.time)}</div>
                     </div>
                   ))}
                 </div>
