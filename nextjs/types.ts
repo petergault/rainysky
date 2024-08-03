@@ -1,5 +1,6 @@
 export interface HourlyForecast {
   precipChance: number;
+  rainAmount: number;
   time: string;
 }
 
@@ -18,22 +19,10 @@ export interface WeatherData {
   weekForecast: DailyForecast[];
 }
 
-export interface TomorrowIOHourlyForecast {
-  time: string;
-  values: {
-    precipitationProbability: number;
-  };
-}
-
-export interface TomorrowIOForecast {
-  timelines: {
-    hourly: TomorrowIOHourlyForecast[];
-  };
-}
-
 export interface ForecaHourlyForecast {
   time: string;
   precipProb: number;
+  precipAccum: number;
 }
 
 export interface ForecaForecast {
@@ -44,6 +33,11 @@ export interface AzureForecast {
   forecasts: Array<{
     date: string;
     precipitationProbability: number;
+    rainFall: {
+      value: number;
+      unit: string;
+      unitType: number;
+    };
   }>;
   locationName: string;
 }

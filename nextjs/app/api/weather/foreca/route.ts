@@ -4,7 +4,7 @@ const FORECA_API_ENDPOINT = 'https://foreca-weather.p.rapidapi.com';
 
 async function getLocationId(zipcode: string): Promise<string> {
   const searchUrl = new URL(FORECA_API_ENDPOINT + '/location/search/' + encodeURIComponent(zipcode));
-  searchUrl.searchParams.append('country', 'us');  // Assuming US zipcodes
+  searchUrl.searchParams.append('country', 'us');
 
   const options = {
     method: 'GET',
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     forecastUrl.searchParams.append('alt', '0');
     forecastUrl.searchParams.append('tempunit', 'C');
     forecastUrl.searchParams.append('windunit', 'MS');
-    forecastUrl.searchParams.append('periods', '168');  // 7 days
+    forecastUrl.searchParams.append('periods', '168');
     forecastUrl.searchParams.append('dataset', 'full');
 
     const options = {
@@ -62,10 +62,10 @@ export async function GET(request: Request) {
     }
     const data = await response.json();
 
-    // Ensure the forecast array exists and contains the expected data
     const forecast = data.forecast?.map((hour: any) => ({
       time: hour.time,
-      precipProb: hour.precipProb ?? 0
+      precipProb: hour.precipProb ?? 0,
+      precipAccum: hour.precipAccum ?? 0
     })) ?? [];
 
     return NextResponse.json({ forecast });

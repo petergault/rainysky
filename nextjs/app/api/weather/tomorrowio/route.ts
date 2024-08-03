@@ -24,11 +24,11 @@ export async function GET(request: Request) {
     }
     const data = await response.json();
 
-    // Ensure the timelines and hourly data exist and contain the expected data
     const hourly = data.timelines?.hourly?.map((hour: any) => ({
       time: hour.time,
       values: {
-        precipitationProbability: hour.values?.precipitationProbability ?? 0
+        precipitationProbability: hour.values?.precipitationProbability ?? 0,
+        precipitationIntensity: hour.values?.precipitationIntensity ?? 0
       }
     })) ?? [];
 

@@ -6,7 +6,7 @@ const AZURE_MAPS_ENDPOINT = 'https://atlas.microsoft.com/weather/forecast/hourly
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const zipcode = searchParams.get('zipcode');
-  const duration = searchParams.get('duration') || '240'; // Default to 10 days (240 hours)
+  const duration = searchParams.get('duration') || '240';
 
   if (!zipcode) {
     return NextResponse.json({ error: 'Zipcode is required' }, { status: 400 });
@@ -33,10 +33,10 @@ export async function GET(request: Request) {
     }
     const data = await response.json();
 
-    // Ensure the forecasts array exists and contains the expected data
     const forecasts = data.forecasts?.map((forecast: any) => ({
       date: forecast.date,
-      precipitationProbability: forecast.precipitationProbability ?? 0
+      precipitationProbability: forecast.precipitationProbability ?? 0,
+      rainFall: forecast.rain ?? 0
     })) ?? [];
 
     return NextResponse.json({ 
