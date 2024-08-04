@@ -45,6 +45,9 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Error fetching Azure Maps data:', error);
-    return NextResponse.json({ error: 'Failed to fetch weather data', details: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to fetch weather data', 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }

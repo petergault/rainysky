@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { WeatherService, DailyForecast, WeatherData, ForecaForecast, AzureForecast, NOAAForecast } from '@/types';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addDays } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
 
 interface WeatherForecastProps {
   zipcode: string;
 }
 
-const generateDailyData = (azureData: AzureForecast, forecaData: ForecaForecast, noaaData: NOAAForecast, date: Date): DailyForecast => {
+const generateDailyData = (azureData: AzureForecast, forecaData: ForecaForecast, noaaData: NOAAForecast, date: Date, dayIndex: number): DailyForecast => {
   const azureService: WeatherService = {
     name: 'Azure Maps',
     hourlyForecast: azureData.forecasts
@@ -32,13 +32,15 @@ const generateDailyData = (azureData: AzureForecast, forecaData: ForecaForecast,
       })),
   };
 
+  const startIndex = dayIndex * 24;
+  const endIndex = startIndex + 24;
   const noaaService: WeatherService = {
     name: 'NOAA Rapid Refresh',
     hourlyForecast: noaaData.hourly.time
-      .filter((time) => new Date(time).toDateString() === date.toDateString())
+      .slice(startIndex, endIndex)
       .map((time, index) => ({
-        precipChance: noaaData.hourly.precipitation_probability[index],
-        rainAmount: noaaData.hourly.precipitation[index],
+        precipChance: noaaData.hourly.precipitation_probability[startIndex + index],
+        rainAmount: noaaData.hourly.precipitation[startIndex + index],
         time: time,
       })),
   };
@@ -78,10 +80,9 @@ const WeatherForecast: React.FC<WeatherForecastProps> = ({ zipcode }) => {
         const noaaData: NOAAForecast = await noaaResponse.json();
         
         const startDate = new Date();
-        const weekForecast = Array.from({ length: 5 }, (_, i) => {
-          const date = new Date(startDate);
-          date.setDate(startDate.getDate() + i);
-          return generateDailyData(azureData, forecaData, noaaData, date);
+        const weekForecast = Array.from({ length: 7 }, (_, i) => {
+          const date = addDays(startDate, i);
+          return generateDailyData(azureData, forecaData, noaaData, date, i);
         }).filter(day => day.services.length > 0);
         
         setWeatherData({

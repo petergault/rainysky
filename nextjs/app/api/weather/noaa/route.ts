@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
   const { latitude, longitude } = location;
 
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=precipitation_probability,precipitation&timezone=America%2FNew_York&models=gfs_seamless`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=precipitation_probability,precipitation&timezone=America%2FNew_York&forecast_days=7&models=gfs_seamless`;
 
   try {
     const response = await fetch(url);
