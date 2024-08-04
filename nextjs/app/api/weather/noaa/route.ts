@@ -28,6 +28,9 @@ export async function GET(request: Request) {
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching NOAA data:', error);
-    return NextResponse.json({ error: 'Failed to fetch weather data' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to fetch weather data', 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
