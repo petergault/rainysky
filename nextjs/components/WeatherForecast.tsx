@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { WeatherService, DailyForecast, WeatherData, ForecaForecast, AzureForecast } from '@/types';
+import { WeatherService, DailyForecast, WeatherData, ForecaForecast, AzureForecast, NOAAForecast } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
 
@@ -9,7 +9,7 @@ interface WeatherForecastProps {
   zipcode: string;
 }
 
-const generateDailyData = (azureData: AzureForecast, forecaData: ForecaForecast, date: Date): DailyForecast => {
+const generateDailyData = (azureData: AzureForecast, forecaData: ForecaForecast, noaaData: NOAAForecast, date: Date): DailyForecast => {
   const azureService: WeatherService = {
     name: 'Azure Maps',
     hourlyForecast: azureData.forecasts
@@ -32,9 +32,20 @@ const generateDailyData = (azureData: AzureForecast, forecaData: ForecaForecast,
       })),
   };
 
+  const noaaService: WeatherService = {
+    name: 'NOAA Rapid Refresh',
+    hourlyForecast: noaaData.hourly.time
+      .filter((time) => new Date(time).toDateString() === date.toDateString())
+      .map((time, index) => ({
+        precipChance: noaaData.hourly.precipitation_probability[index],
+        rainAmount: noaaData.hourly.precipitation[index],
+        time: time,
+      })),
+  };
+
   return {
     date,
-    services: [azureService, forecaService].filter(service => service.hourlyForecast && service.hourlyForecast.length > 0),
+    services: [azureService, forecaService, noaaService].filter(service => service.hourlyForecast && service.hourlyForecast.length > 0),
   };
 };
 
@@ -52,23 +63,25 @@ const WeatherForecast: React.FC<WeatherForecastProps> = ({ zipcode }) => {
       }
 
       try {
-        const [azureResponse, forecaResponse] = await Promise.all([
+        const [azureResponse, forecaResponse, noaaResponse] = await Promise.all([
           fetch(`/api/weather/azuremaps?zipcode=${zipcode}&duration=240`),
-          fetch(`/api/weather/foreca?location=${zipcode}`)
+          fetch(`/api/weather/foreca?location=${zipcode}`),
+          fetch(`/api/weather/noaa?zipcode=${zipcode}`)
         ]);
 
-        if (!azureResponse.ok || !forecaResponse.ok) {
+        if (!azureResponse.ok || !forecaResponse.ok || !noaaResponse.ok) {
           throw new Error('Failed to fetch weather data from one or more sources.');
         }
 
         const azureData: AzureForecast = await azureResponse.json();
         const forecaData: ForecaForecast = await forecaResponse.json();
+        const noaaData: NOAAForecast = await noaaResponse.json();
         
         const startDate = new Date();
         const weekForecast = Array.from({ length: 5 }, (_, i) => {
           const date = new Date(startDate);
           date.setDate(startDate.getDate() + i);
-          return generateDailyData(azureData, forecaData, date);
+          return generateDailyData(azureData, forecaData, noaaData, date);
         }).filter(day => day.services.length > 0);
         
         setWeatherData({
